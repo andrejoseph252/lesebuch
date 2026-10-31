@@ -19,6 +19,8 @@ async function storeClean(pages, { replaceChapterList }) {
   await db.putMany('pages', recs);
   if (replaceChapterList) await replaceChapters(book.chapters.map((c) => ({ startPage: c.startPage, title: c.title })));
   await syncExercises(book.exercises);
+  const { applyAnswerKey } = await import('./answerkey.js');
+  await applyAnswerKey({ force: true });
   return book;
 }
 

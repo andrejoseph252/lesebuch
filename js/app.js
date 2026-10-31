@@ -74,6 +74,7 @@ async function start() {
   if (!location.hash) history.replaceState(null, '', '#/heute');
   // better cleaning rules shipped with an update: rebuild page text from the stored EPUB first
   await import('./epubbook.js').then((m) => m.recleanIfNeeded()).catch((e) => console.warn('reclean', e));
+  await import('./answerkey.js').then((m) => m.applyAnswerKey()).catch((e) => console.warn('answer key', e));
   route();
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {

@@ -330,4 +330,6 @@ const EN = {
   'Gelöscht': 'Deleted',
   'Lösung': 'Answer',
   'Musterlösung': 'Answer key',
+  'Musterlösung: ': 'Model answer: ',
+  ' (aus dem Lösungsschlüssel)': ' (from the answer key)',
 };

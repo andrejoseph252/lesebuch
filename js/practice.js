@@ -134,7 +134,7 @@ async function renderChapterPractice(view, chNum) {
         const given = inputs[0].value.trim();
         results.push({ key: 'q', given, expected: ex.answer || null, explanation: ex.explanation });
       } else {
-        gapIdx().forEach((si, k) => results.push({ key: si, input: inputs[k], given: inputs[k].value.trim(), expected: ex.segs[si].answer || null, auto: ex.segs[si].auto, explanation: ex.segs[si].explanation }));
+        gapIdx().forEach((si, k) => results.push({ key: si, input: inputs[k], given: inputs[k].value.trim(), expected: ex.segs[si].answer || null, auto: ex.segs[si].auto, src: ex.segs[si].src, explanation: ex.segs[si].explanation }));
       }
       let pending = 0;
       for (const r of results) {
@@ -143,7 +143,7 @@ async function renderChapterPractice(view, chNum) {
           r.ok = r.g.kind === 'correct' || r.g.kind === 'case';
           r.input?.classList.add(r.g.kind === 'correct' ? 'ok' : r.ok || r.g.kind === 'near' ? 'near' : 'bad');
           if (!r.ok) feedback.append(h('div', { class: `verdict ${r.g.kind === 'near' ? 'near' : 'bad'}` },
-            h('div', {}, verdictText(r.g), r.auto ? t(' (Lösung aus dem Buchtext)') : ''),
+            h('div', {}, verdictText(r.g), r.auto ? t(r.src === 'key' ? ' (aus dem Lösungsschlüssel)' : ' (Lösung aus dem Buchtext)') : ''),
             h('div', { class: 'ans' }, r.expected),
             r.explanation ? h('div', { class: 'small' }, r.explanation) : null,
             h('button', { class: 'btn small mt', onclick: (e) => { r.ok = true; r.override = true; e.target.closest('.verdict').className = 'verdict ok'; e.target.replaceWith(h('span', { class: 'small' }, t('Als richtig gewertet ✓'))); } }, t('Meine Antwort war auch richtig'))));
@@ -155,7 +155,7 @@ async function renderChapterPractice(view, chNum) {
             h('input', { 'data-de': '', placeholder: t('Richtige Form'), autocapitalize: 'off', style: { marginTop: '8px' } }));
           const box = h('div', { class: 'verdict near' },
             h('div', {}, ex.type === 'answer' ? t('Selbst prüfen') : t('Lösung noch unbekannt – selbst prüfen:')),
-            r.expected ? h('div', {}, t('Gespeicherte Antwort: '), h('span', { class: 'ans' }, r.expected)) : null,
+            r.expected ? h('div', {}, ex.answerSrc === 'key' ? t('Musterlösung: ') : t('Gespeicherte Antwort: '), h('span', { class: 'ans' }, r.expected)) : null,
             r.explanation ? h('div', { class: 'small' }, r.explanation) : null,
             h('div', { class: 'ans' }, r.given || '(leer)'),
             h('div', { class: 'row mt' },
