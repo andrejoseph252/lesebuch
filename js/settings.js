@@ -2,6 +2,7 @@
 import { kv } from './db.js';
 
 const DEFAULTS = {
+  uiLang: 'en',             // en | de — interface only; the book stays German
   theme: 'auto',            // auto | light | dark
   fontSize: 19,             // reader text size in px
   marginSide: 'right',      // right | left | off — where the book's glosses sit

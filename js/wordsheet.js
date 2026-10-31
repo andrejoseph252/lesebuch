@@ -1,4 +1,5 @@
 // Bottom sheet for a tapped word: pronounce, context sentence, dictionaries, add/edit in the word list.
+import { t } from './i18n.js';
 import { h, sheet, toast, icon, genderClass, confirmSheet, fmtDue, esc } from './ui.js';
 import * as db from './db.js';
 import { findWord, saveWord, deleteWord, clozeSpan } from './model.js';
@@ -24,25 +25,25 @@ function sentenceWithMark(sentence, form) {
 function shadowBlock(sentence) {
   if (!srSupported) return null;
   const out = h('div', { class: 'match-words', style: { marginTop: '10px' } });
-  const btn = h('button', { class: 'btn small', type: 'button' }, icon('mic'), 'Nachsprechen');
+  const btn = h('button', { class: 'btn small', type: 'button' }, icon('mic'), t('Nachsprechen'));
   let busy = false;
   btn.addEventListener('click', async () => {
     if (busy) { listen.stop(); return; }
     busy = true;
     stopTts();
-    btn.lastChild.textContent = 'Stopp';
-    out.innerHTML = '<span class="small">Sprich jetzt …</span>';
+    btn.lastChild.textContent = t('Stopp');
+    out.innerHTML = t('<span class="small">Sprich jetzt …</span>');
     try {
-      const spoken = await listen({ onPartial: (t) => { out.innerHTML = `<span class="small">${esc(t)}</span>`; } });
+      const spoken = await listen({ onPartial: (txt) => { out.innerHTML = `<span class="small">${esc(txt)}</span>`; } });
       const r = matchWords(sentence, spoken);
       out.innerHTML = '';
       r.words.forEach((x, i) => out.append(i ? ' ' : '', h('span', { class: x.hit ? 'hit' : 'miss' }, x.w)));
-      out.append(h('div', { class: 'small' }, `${Math.round(r.score * 100)} % erkannt${spoken ? ` · „${spoken}“` : ''}`));
+      out.append(h('div', { class: 'small' }, t('{0} % erkannt', Math.round(r.score * 100)) + (spoken ? ` · „${spoken}“` : '')));
     } catch (e) {
-      out.innerHTML = `<span class="small">Mikrofon nicht verfügbar (${esc(e.message)})</span>`;
+      out.innerHTML = t('<span class=\'small\'>Mikrofon nicht verfügbar ({0})</span>', esc(e.message));
     }
     busy = false;
-    btn.lastChild.textContent = 'Nachsprechen';
+    btn.lastChild.textContent = t('Nachsprechen');
   });
   return h('div', {}, btn, out);
 }
@@ -77,7 +78,7 @@ export async function openWordSheet(ctx) {
 
   // --- form ---
   const lemmaIn = h('input', { type: 'text', value: w.lemma, autocapitalize: 'off', autocomplete: 'off', spellcheck: 'false', 'data-de': '' });
-  const pluralIn = h('input', { type: 'text', value: w.plural || '', placeholder: 'z. B. die Häuser', autocapitalize: 'off', autocomplete: 'off', 'data-de': '' });
+  const pluralIn = h('input', { type: 'text', value: w.plural || '', placeholder: t('z. B. die Häuser'), autocapitalize: 'off', autocomplete: 'off', 'data-de': '' });
   const meaningIn = h('input', { type: 'text', value: w.meaning || '', placeholder: 'optional', autocomplete: 'off', 'data-de': '' });
   const sentenceIn = h('textarea', { rows: 3, 'data-de': '' }, w.sentence || '');
   let article = w.article || '';
@@ -89,40 +90,40 @@ export async function openWordSheet(ctx) {
       e.preventDefault();
     },
   }, a)));
-  const where = [w.chapter ? `Kapitel ${w.chapter}` : null, w.page ? `S. ${w.page}` : null, w.textId ? 'Lesetext' : null].filter(Boolean).join(' · ');
+  const where = [w.chapter ? t('Kapitel {0}', w.chapter) : null, w.page ? t('S. {0}', w.page) : null, w.textId ? t('Lesetext') : null].filter(Boolean).join(' · ');
 
   const formEl = h('form', { class: 'mt', onsubmit: async (e) => {
     e.preventDefault();
     const lemma = lemmaIn.value.trim();
     if (!lemma) { lemmaIn.focus(); return; }
     const rec = await saveWord({ ...w, lemma, article, plural: pluralIn.value.trim(), meaning: meaningIn.value.trim(), sentence: sentenceIn.value.trim() });
-    toast(existing ? 'Gespeichert' : `„${lemma}“ hinzugefügt`);
+    toast(existing ? t('Gespeichert') : t('„{0}“ hinzugefügt', lemma));
     s.close();
     ctx.onSaved?.(rec);
   } },
-    h('label', { class: 'field' }, h('span', {}, 'Grundform'), lemmaIn),
-    h('div', { class: 'field' }, h('span', {}, 'Artikel'), artSeg),
-    h('label', { class: 'field' }, h('span', {}, 'Plural'), pluralIn),
-    h('label', { class: 'field' }, h('span', {}, 'Bedeutung / Notiz'), meaningIn),
-    h('label', { class: 'field' }, h('span', {}, 'Satz'), sentenceIn),
+    h('label', { class: 'field' }, h('span', {}, t('Grundform')), lemmaIn),
+    h('div', { class: 'field' }, h('span', {}, t('Artikel')), artSeg),
+    h('label', { class: 'field' }, h('span', {}, t('Plural')), pluralIn),
+    h('label', { class: 'field' }, h('span', {}, t('Bedeutung / Notiz')), meaningIn),
+    h('label', { class: 'field' }, h('span', {}, t('Satz')), sentenceIn),
     where ? h('p', { class: 'small' }, where) : null,
     h('div', { class: 'row' },
       existing ? h('button', { type: 'button', class: 'btn danger', onclick: async () => {
-        if (await confirmSheet('Wort löschen?', `„${existing.lemma}“ und seine Karten werden entfernt.`, { ok: 'Löschen', danger: true })) {
+        if (await confirmSheet(t('Wort löschen?'), t('„{0}“ und seine Karten werden entfernt.', existing.lemma), { ok: t('Löschen'), danger: true })) {
           await deleteWord(existing.id);
-          toast('Gelöscht');
+          toast(t('Gelöscht'));
           s.close();
           ctx.onSaved?.(null);
         }
-      } }, 'Löschen') : null,
-      h('button', { type: 'submit', class: 'btn primary grow' }, existing ? 'Speichern' : 'Zu Wörtern hinzufügen')));
+      } }, t('Löschen')) : null,
+      h('button', { type: 'submit', class: 'btn primary grow' }, existing ? t('Speichern') : t('Zu Wörtern hinzufügen'))));
 
   const sentenceBlock = sentence ? h('div', { class: 'card', style: { marginTop: '12px' } },
     h('div', { class: 'serif', style: { fontSize: '17px', lineHeight: '1.55' } }, sentenceWithMark(sentence, form)),
     h('div', { class: 'row wrap', style: { gap: '6px', marginTop: '10px' } },
-      ttsSupported ? h('button', { class: 'btn small', type: 'button', onclick: () => speak(sentence) }, icon('speaker'), 'Satz') : null,
-      ctx.onReadFrom ? h('button', { class: 'btn small', type: 'button', onclick: () => { s.close(); ctx.onReadFrom(); } }, '▶ Ab hier vorlesen') : null,
-      apiKey.get() ? h('button', { class: 'btn small', type: 'button', onclick: () => import('./ai.js').then((m) => m.explainSentenceSheet(sentence)) }, 'Satz erklären') : null),
+      ttsSupported ? h('button', { class: 'btn small', type: 'button', onclick: () => speak(sentence) }, icon('speaker'), t('Satz')) : null,
+      ctx.onReadFrom ? h('button', { class: 'btn small', type: 'button', onclick: () => { s.close(); ctx.onReadFrom(); } }, t('▶ Ab hier vorlesen')) : null,
+      apiKey.get() ? h('button', { class: 'btn small', type: 'button', onclick: () => import('./ai.js').then((m) => m.explainSentenceSheet(sentence)) }, t('Satz erklären')) : null),
     shadowBlock(sentence)) : null;
 
   const stats = existing ? await statsBlock(existing.id) : null;
@@ -130,8 +131,8 @@ export async function openWordSheet(ctx) {
   const content = h('div', {},
     h('div', { class: 'spread' },
       h('h3', { class: genderClass(w.article), style: { margin: 0 } }, w.article && existing ? h('span', { class: 'art' }, `${w.article} `) : null, existing ? w.lemma : form),
-      ttsSupported ? h('button', { class: 'iconbtn', type: 'button', 'aria-label': 'Aussprechen', onclick: () => speak(w.article && existing ? `${w.article} ${w.lemma}` : form) }, icon('speaker')) : null),
-    existing && !ctx.word ? h('p', { class: 'small', style: { margin: '4px 0 0' } }, 'Schon in deiner Wortliste') : null,
+      ttsSupported ? h('button', { class: 'iconbtn', type: 'button', 'aria-label': t('Aussprechen'), onclick: () => speak(w.article && existing ? `${w.article} ${w.lemma}` : form) }, icon('speaker')) : null),
+    existing && !ctx.word ? h('p', { class: 'small', style: { margin: '4px 0 0' } }, t('Schon in deiner Wortliste')) : null,
     sentenceBlock,
     links,
     stats,
@@ -145,6 +146,6 @@ async function statsBlock(wordId) {
   const cards = await db.byIndex('cards', 'ref', `w:${wordId}`);
   if (!cards.length) return null;
   return h('div', { class: 'list', style: { marginTop: '12px' } }, cards.map((c) => h('div', { class: 'item', style: { minHeight: '44px', padding: '9px 14px' } },
-    h('span', { class: 'grow' }, TYPE_NAMES[c.type] || c.type),
-    h('span', { class: 'small' }, c.state === 'new' ? 'neu' : `fällig ${fmtDue(c.due)} · S ${c.stability.toFixed(1)} T · ${c.reps}× · ${c.lapses} Fehler`))));
+    h('span', { class: 'grow' }, t(TYPE_NAMES[c.type] || c.type)),
+    h('span', { class: 'small' }, c.state === 'new' ? t('neu') : t('fällig {0} · S {1} T · {2}× · {3} Fehler', fmtDue(c.due), c.stability.toFixed(1), c.reps, c.lapses)))));
 }

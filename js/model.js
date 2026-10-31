@@ -1,4 +1,5 @@
 // Domain helpers on top of the stores: chapters, words, cards, exercises.
+import { t } from './i18n.js';
 import * as db from './db.js';
 
 // ---------- chapters ----------
@@ -14,8 +15,8 @@ export function chapterFor(chs, page) {
   return found;
 }
 export function chapterTitle(c) {
-  if (!c) return 'Vor Kapitel 1';
-  return c.title || `Kapitel ${c.num}`;
+  if (!c) return t('Vor Kapitel 1');
+  return c.title || t('Kapitel {0}', c.num);
 }
 /** Last page of a chapter (page before the next chapter starts). */
 export function chapterEnd(chs, c, numPages) {

@@ -1,4 +1,5 @@
 // Illustrations: per-image display mode, crop and position. Defaults per edition, edits per device.
+import { t } from './i18n.js';
 import { h, sheet, toast } from './ui.js';
 import * as db from './db.js';
 import { imageUrl } from './epubbook.js';
@@ -42,6 +43,22 @@ async function saveSetting(path, value) {
   await db.kv.set('imageEdits', all);
 }
 
+// A user-supplied replacement (photo/screenshot of the page) wins over the EPUB's image.
+const replUrls = new Map();
+async function sourceUrl(path) {
+  const key = `imageReplace:${base(path)}`;
+  if (replUrls.has(key)) return replUrls.get(key);
+  const blob = await db.kv.get(key);
+  const url = blob ? URL.createObjectURL(blob) : await imageUrl(path);
+  replUrls.set(key, url);
+  return url;
+}
+async function setReplacement(path, blob) {
+  const key = `imageReplace:${base(path)}`;
+  if (blob) await db.kv.set(key, blob); else await db.kv.del(key);
+  replUrls.delete(key);
+}
+
 const natCache = new Map();
 async function natural(url) {
   if (natCache.has(url)) return natCache.get(url);
@@ -76,7 +93,7 @@ async function croppedUrl(url, crop) {
 export async function renderIllustrations(paths, top, bottom, onChange) {
   let hidden = 0;
   for (const path of paths) {
-    const url = await imageUrl(path).catch(() => null);
+    const url = await sourceUrl(path).catch(() => null);
     if (!url) continue;
     const nat = await natural(url);
     const s = await getSetting(path, nat);
@@ -85,49 +102,54 @@ export async function renderIllustrations(paths, top, bottom, onChange) {
     if (s.mode === 'page') {
       slot.append(h('button', { class: 'scan-card', onclick: () => viewer(url, path, onChange) },
         h('img', { src: url, alt: '' }),
-        h('span', {}, h('b', {}, 'Originalseite (Scan)'), h('span', { class: 'small' }, 'Antippen zum Ansehen und Zoomen'))));
+        h('span', {}, h('b', {}, t('Originalseite (Scan)')), h('span', { class: 'small' }, t('Antippen zum Ansehen und Zoomen')))));
     } else {
       const fig = h('figure', { class: 'illus-fig' },
-        h('img', { class: 'illus', src: await croppedUrl(url, s.crop), alt: 'Illustration', onclick: () => viewer(url, path, onChange) }),
-        h('button', { class: 'illus-edit', 'aria-label': 'Bild bearbeiten', onclick: () => editor(url, path, onChange) }, '✎'));
+        h('img', { class: 'illus', src: await croppedUrl(url, s.crop), alt: t('Illustration'), onclick: () => viewer(url, path, onChange) }),
+        h('button', { class: 'illus-edit', 'aria-label': t('Bild bearbeiten'), onclick: () => editor(url, path, onChange) }, '✎'));
       slot.append(fig);
     }
   }
   if (hidden) {
-    bottom.append(h('p', { class: 'center' }, h('button', { class: 'btn ghost small', onclick: () => hiddenList(paths, onChange) }, `${hidden} ausgeblendete${hidden === 1 ? 's Bild' : ' Bilder'}`)));
+    bottom.append(h('p', { class: 'center' }, h('button', { class: 'btn ghost small', onclick: () => hiddenList(paths, onChange) }, hidden === 1 ? t('1 ausgeblendetes Bild') : t('{0} ausgeblendete Bilder', hidden))));
   }
 }
 
 async function hiddenList(paths, onChange) {
   const items = [];
   for (const p of paths) {
-    const url = await imageUrl(p);
+    const url = await sourceUrl(p);
     const s = await getSetting(p, await natural(url));
     if (s.mode === 'hidden') items.push([p, url]);
   }
-  const sh = sheet(h('div', {}, h('h3', {}, 'Ausgeblendete Bilder'),
+  const sh = sheet(h('div', {}, h('h3', {}, t('Ausgeblendete Bilder')),
     h('div', { class: 'row wrap' }, items.map(([p, url]) => h('button', { class: 'scan-card', onclick: () => { sh.close(); editor(url, p, onChange); } },
-      h('img', { src: url, alt: '' }), h('span', {}, h('b', {}, 'Bearbeiten')))))));
+      h('img', { src: url, alt: '' }), h('span', {}, h('b', {}, t('Bearbeiten'))))))));
 }
 
 /** Full-screen viewer with zoom; the original scan, uncropped. */
 function viewer(url, path, onChange) {
-  let zoom = 1;
-  const img = h('img', { src: url, alt: 'Originalseite' });
+  let zoom = 0; // 0 = fit the whole image on screen
+  const img = h('img', { src: url, alt: t('Originalseite') });
   const wrap = h('div', { class: 'viewer-scroll' }, img);
-  const setZoom = (z) => { zoom = z; img.style.width = `${z * 100}%`; seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.z === z)); };
-  const seg = h('div', { class: 'seg' }, [1, 2, 3].map((z) => h('button', { dataset: { z }, onclick: () => setZoom(z) }, `${z}×`)));
+  const setZoom = (z) => {
+    zoom = z;
+    wrap.classList.toggle('fit', z === 0);
+    img.style.width = z ? `${z * 100}%` : '';
+    seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.z === z));
+  };
+  const seg = h('div', { class: 'seg' }, [[0, t('Einpassen')], [1, '1×'], [2, '2×'], [3, '3×']].map(([z, l]) => h('button', { dataset: { z }, onclick: () => setZoom(z) }, l)));
   const close = () => { el.remove(); document.removeEventListener('keydown', esc); };
   const esc = (e) => { if (e.key === 'Escape') close(); };
-  const el = h('div', { class: 'viewer', role: 'dialog', 'aria-label': 'Bild' },
+  const el = h('div', { class: 'viewer', role: 'dialog', 'aria-label': t('Bild') },
     h('div', { class: 'viewer-bar' },
-      h('button', { class: 'btn small', onclick: close }, 'Schliessen'), seg,
-      h('button', { class: 'btn small', onclick: () => { close(); editor(url, path, onChange); } }, 'Bearbeiten')),
+      h('button', { class: 'btn small', onclick: close }, t('Schliessen')), seg,
+      h('button', { class: 'btn small', onclick: () => { close(); editor(url, path, onChange); } }, t('Bearbeiten'))),
     wrap);
-  img.addEventListener('dblclick', () => setZoom(zoom === 1 ? 2 : 1));
+  img.addEventListener('dblclick', () => setZoom(zoom === 0 ? 2 : 0));
   document.addEventListener('keydown', esc);
   document.body.append(el);
-  setZoom(1);
+  setZoom(0);
 }
 
 /** Crop + mode + position editor. */
@@ -179,23 +201,42 @@ async function editor(url, path, onChange) {
     const el = h('div', { class: 'seg full' }, opts.map(([v, l]) => h('button', { class: v === val ? 'on' : '', onclick: () => { set(v); el.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', opts[i][0] === v)); posRow.hidden = mode !== 'inline'; stage.parentElement.hidden = mode !== 'inline'; } }, l)));
     return el;
   };
-  const modeSeg = segOf([['inline', 'Im Text'], ['page', 'Originalseite'], ['hidden', 'Ausblenden']], mode, (v) => { mode = v; });
-  const posRow = h('div', { class: 'field' }, h('span', {}, 'Position'), segOf([['top', 'Über dem Text'], ['bottom', 'Unter dem Text']], pos, (v) => { pos = v; }));
+  const modeSeg = segOf([['inline', t('Im Text')], ['page', t('Originalseite')], ['hidden', t('Ausblenden')]], mode, (v) => { mode = v; });
+  const posRow = h('div', { class: 'field' }, h('span', {}, t('Position')), segOf([['top', t('Über dem Text')], ['bottom', t('Unter dem Text')]], pos, (v) => { pos = v; }));
   posRow.hidden = mode !== 'inline';
 
+  const hasOwn = !!(await db.kv.get(`imageReplace:${base(path)}`));
+  const pick = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async () => {
+    const f = pick.files?.[0];
+    if (!f) return;
+    await setReplacement(path, f);
+    // a new picture needs a fresh crop
+    const prev = (await loadEdits())[base(path)];
+    await saveSetting(path, { ...(prev || {}), mode: 'inline', crop: null });
+    s.close();
+    toast(t('Eigenes Bild gespeichert'));
+    onChange?.();
+  } });
+  const replaceRow = h('div', { class: 'field' },
+    h('span', {}, t('Ersetze das Bild durch ein Foto oder einen Screenshot der Seite (bleibt nur auf diesem Gerät).')),
+    h('div', { class: 'row wrap' },
+      h('button', { class: 'btn small', onclick: () => pick.click() }, t('Bild ersetzen')),
+      hasOwn ? h('button', { class: 'btn small danger', onclick: async () => { await setReplacement(path, null); s.close(); onChange?.(); } }, t('Eigenes Bild entfernen')) : null),
+    pick);
   const s = sheet(h('div', {},
-    h('h3', {}, 'Bild bearbeiten'),
-    h('div', { class: 'field' }, h('span', {}, 'Anzeige'), modeSeg),
+    h('h3', {}, t('Bild bearbeiten')),
+    h('div', { class: 'field' }, h('span', {}, t('Anzeige')), modeSeg),
     posRow,
-    h('div', { class: 'field', hidden: mode !== 'inline' }, h('span', {}, 'Zuschneiden – Ecken ziehen, Rahmen verschieben'), stage,
-      h('div', { class: 'row mt' }, h('button', { class: 'btn small', onclick: () => { crop = [0, 0, 1, 1]; place(); } }, 'Ganzes Bild'))),
+    h('div', { class: 'field', hidden: mode !== 'inline' }, h('span', {}, t('Zuschneiden – Ecken ziehen, Rahmen verschieben')), stage,
+      h('div', { class: 'row mt' }, h('button', { class: 'btn small', onclick: () => { crop = [0, 0, 1, 1]; place(); } }, t('Ganzes Bild')))),
+    replaceRow,
     h('div', { class: 'row mt' },
-      h('button', { class: 'btn', onclick: async () => { await saveSetting(path, null); s.close(); toast('Zurückgesetzt'); onChange?.(); } }, 'Standard'),
+      h('button', { class: 'btn', onclick: async () => { await saveSetting(path, null); s.close(); toast('Zurückgesetzt'); onChange?.(); } }, t('Standard')),
       h('button', { class: 'btn primary grow', onclick: async () => {
         const full = crop[0] < 0.005 && crop[1] < 0.005 && crop[2] > 0.99 && crop[3] > 0.99;
         await saveSetting(path, { mode, pos, crop: full ? null : crop.map((v) => +v.toFixed(4)) });
         s.close();
         toast('Bild gespeichert');
         onChange?.();
-      } }, 'Speichern'))));
+      } }, t('Speichern')))));
 }

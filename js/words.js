@@ -1,4 +1,5 @@
 // Wörter: your word list — search, filter, edit, per-word card stats.
+import { t } from './i18n.js';
 import { h, genderClass } from './ui.js';
 import * as db from './db.js';
 import { listChapters, chapterFor } from './model.js';
@@ -12,10 +13,10 @@ export async function renderWords(view) {
   const f = { q: '', ch: '', g: '' };
   try { Object.assign(f, JSON.parse(localStorage.getItem('lesebuch.wordFilter') || '{}'), { q: '' }); } catch { /* storage blocked */ }
 
-  view.append(h('h1', {}, 'Wörter'));
-  const search = h('input', { type: 'search', placeholder: `${words.length} Wörter durchsuchen`, 'data-de': '', autocapitalize: 'off', value: f.q });
-  const chSel = h('select', {}, h('option', { value: '' }, 'Alle Kapitel'), chapters.map((c) => h('option', { value: c.num, selected: String(f.ch) === String(c.num) }, `Kapitel ${c.num}`)));
-  const chips = h('div', { class: 'chips' }, [['', 'Alle'], ['der', 'der'], ['die', 'die'], ['das', 'das'], ['-', 'ohne']].map(([v, l]) =>
+  view.append(h('h1', {}, t('Wörter')));
+  const search = h('input', { type: 'search', placeholder: t('{0} Wörter durchsuchen', words.length), 'data-de': '', autocapitalize: 'off', value: f.q });
+  const chSel = h('select', {}, h('option', { value: '' }, t('Alle Kapitel')), chapters.map((c) => h('option', { value: c.num, selected: String(f.ch) === String(c.num) }, t('Kapitel {0}', c.num))));
+  const chips = h('div', { class: 'chips' }, [['', t('Alle')], ['der', 'der'], ['die', 'die'], ['das', 'das'], ['-', t('ohne')]].map(([v, l]) =>
     h('button', { class: `chip ${f.g === v ? 'on' : ''} ${genderClass(v)}`, dataset: { g: v } }, l)));
   const list = h('div', { class: 'list mt' });
   view.append(search, h('div', { class: 'row mt' }, h('div', { class: 'grow' }, chSel)), h('div', { class: 'mt' }, chips), list);
@@ -30,7 +31,7 @@ export async function renderWords(view) {
       .sort((a, b) => a.lemmaKey.localeCompare(b.lemmaKey, 'de'));
     list.innerHTML = '';
     if (!shown.length) {
-      list.append(h('div', { class: 'item small' }, words.length ? 'Keine Treffer.' : 'Noch keine Wörter. Tippe beim Lesen auf ein Wort und wähle „Zu Wörtern hinzufügen“.'));
+      list.append(h('div', { class: 'item small' }, words.length ? t('Keine Treffer.') : t('Noch keine Wörter. Tippe beim Lesen auf ein Wort und wähle „Zu Wörtern hinzufügen“.')));
       return;
     }
     for (const w of shown) {
@@ -41,8 +42,8 @@ export async function renderWords(view) {
         h('div', { class: 'grow' },
           h('div', { class: 'lemma' }, w.article ? h('span', { class: `art ${genderClass(w.article)}` }, `${w.article} `) : null, w.lemma,
             w.plural ? h('span', { class: 'small' }, ` · ${w.plural}`) : null),
-          h('div', { class: 'meta ellipsis' }, [w.meaning, chOf(w) ? `Kap. ${chOf(w)}` : null].filter(Boolean).join(' · '))),
-        h('span', { class: 'badge' }, !cs.length ? '–' : !learned.length ? 'neu' : stab >= 21 ? 'sicher' : `${Math.round(stab)} T`)));
+          h('div', { class: 'meta ellipsis' }, [w.meaning, chOf(w) ? t('Kap. {0}', chOf(w)) : null].filter(Boolean).join(' · '))),
+        h('span', { class: 'badge' }, !cs.length ? '–' : !learned.length ? t('neu') : stab >= 21 ? t('sicher') : t('{0} T', Math.round(stab)))));
     }
   };
   search.addEventListener('input', () => { f.q = search.value; draw(); });

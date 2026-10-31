@@ -1,5 +1,6 @@
 // App shell: routing between tabs, startup.
 import { h, $, $$, initKeyboardBar } from './ui.js';
+import { t } from './i18n.js';
 import { loadSettings, settings, onSettings, applySettings } from './settings.js';
 import { leaveReader } from './reader.js';
 
@@ -19,10 +20,11 @@ let navSeq = 0;
 
 async function route() {
   const seq = ++navSeq;
-  const [name = 'heute', ...args] = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
-  const key = ROUTES[name] ? name : 'heute';
+  const [name = t('heute'), ...args] = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const key = ROUTES[name] ? name : t('heute');
   const tab = TAB_OF[key] || key;
   $$('#tabbar a').forEach((a) => a.classList.toggle('active', a.dataset.tab === tab));
+  translateShell();
   document.body.dataset.route = key;
 
   if (current) current.dispatchEvent(new Event('view:leave'));
@@ -38,8 +40,14 @@ async function route() {
   } catch (e) {
     console.error(e);
     if (seq !== navSeq) return;
-    $('#view').replaceChildren(h('div', { class: 'empty' }, h('h1', {}, 'Hoppla'), h('p', {}, e.message)));
+    $('#view').replaceChildren(h('div', { class: 'empty' }, h('h1', {}, t('Hoppla')), h('p', {}, e.message)));
   }
+}
+
+const TAB_LABELS = { heute: 'Heute', lesen: 'Lesen', ueben: 'Üben', woerter: 'Wörter', mehr: 'Mehr' };
+function translateShell() {
+  $$('#tabbar a').forEach((a) => { a.querySelector('span').textContent = t(TAB_LABELS[a.dataset.tab]); });
+  document.documentElement.lang = settings.uiLang === 'de' ? 'de' : 'en';
 }
 
 /** Re-render the current view (e.g. after data changed elsewhere). */
@@ -57,6 +65,7 @@ async function start() {
   });
   let lastLayoutKey = layoutKey();
   onSettings(() => {
+    translateShell();
     // reflow the reader when settings that affect layout change
     const k = layoutKey();
     if (k !== lastLayoutKey && document.body.dataset.route === 'lesen') route();

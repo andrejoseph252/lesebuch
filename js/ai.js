@@ -1,6 +1,7 @@
 // Optional AI tutor. Calls the Anthropic Messages API straight from the browser with the
 // user's own key (stored in localStorage on this device only). Everything else works without it.
 import { h, sheet, toast } from './ui.js';
+import { t } from './i18n.js';
 import * as db from './db.js';
 import { settings, apiKey } from './settings.js';
 import { listChapters, chapterFor } from './model.js';
@@ -10,7 +11,7 @@ const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 
 async function call({ system, user, schema, effort = 'low', maxTokens = 4000 }) {
   const key = apiKey.get();
-  if (!key) throw new Error('Kein API-Schlüssel gesetzt (Mehr → KI-Tutor)');
+  if (!key) throw new Error(t('Kein API-Schlüssel gesetzt (Mehr → KI-Tutor)'));
   const body = {
     model: settings.aiModel || 'claude-opus-5-5',
     max_tokens: maxTokens,
@@ -38,15 +39,15 @@ async function call({ system, user, schema, effort = 'low', maxTokens = 4000 }) 
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try { msg = (await res.json()).error?.message || msg; } catch { /* not JSON */ }
-    if (res.status === 401) msg = 'API-Schlüssel ungültig';
-    if (res.status === 429) msg = 'Zu viele Anfragen – bitte kurz warten';
+    if (res.status === 401) msg = t('API-Schlüssel ungültig');
+    if (res.status === 429) msg = t('Zu viele Anfragen – bitte kurz warten');
     throw new Error(msg);
   }
   const data = await res.json();
-  if (data.stop_reason === 'refusal') throw new Error('Die KI hat diese Anfrage abgelehnt.');
+  if (data.stop_reason === 'refusal') throw new Error(t('Die KI hat diese Anfrage abgelehnt.'));
   const text = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
   if (!schema) return text;
-  try { return JSON.parse(text); } catch { throw new Error('Antwort der KI war kein gültiges JSON'); }
+  try { return JSON.parse(text); } catch { throw new Error(t('Antwort der KI war kein gültiges JSON')); }
 }
 
 export async function ping() {
@@ -59,7 +60,7 @@ export async function checkExercise(ex, given) {
   const sentence = isAnswer ? ex.q : ex.segs.map((s, i) => (s.t === 'gap' ? `[LÜCKE ${ex.segs.slice(0, i).filter((x) => x.t === 'gap').length + 1}]` : s.v)).join('');
   const n = isAnswer ? 1 : ex.segs.filter((s) => s.t === 'gap').length;
   const r = await call({
-    system: 'Du bist ein geduldiger Deutschlehrer für Anfänger (Lehrbuch "Deutsch nach der Naturmethode"). Erklärungen: ein kurzer Satz in einfachem Deutsch.',
+    system: `Du bist ein geduldiger Deutschlehrer für Anfänger (Lehrbuch "Deutsch nach der Naturmethode"). Erklärungen: ein kurzer Satz ${settings.uiLang === 'de' ? 'in einfachem Deutsch' : 'auf Englisch (the learner reads English)'}.`,
     user: isAnswer
       ? `Frage aus einer Übung: "${sentence}"\nAntwort des Lernenden: "${given[0] || ''}"\nGib eine korrekte, einfache Musterantwort als ganzen Satz und eine kurze Erklärung (was am Lernenden-Satz falsch oder richtig ist).`
       : `Lückensatz aus einer Übung: "${sentence}"\nEingaben des Lernenden: ${JSON.stringify(given)}\nGib für jede der ${n} Lücken die richtige Form (nur das fehlende Wort bzw. die Wörter) und eine kurze Erklärung.`,
@@ -78,15 +79,15 @@ export async function checkExercise(ex, given) {
 
 // ---------- explain a sentence ----------
 export async function explainSentenceSheet(sentence) {
-  const out = h('div', { class: 'ai-out' }, h('span', { class: 'spinner' }), ' KI erklärt …');
-  let lang = 'de';
+  const out = h('div', { class: 'ai-out' }, h('span', { class: 'spinner' }), t(' KI erklärt …'));
+  let lang = settings.uiLang === 'de' ? 'de' : 'en';
   let data = null;
   const toggle = h('div', { class: 'seg', hidden: true },
-    h('button', { class: 'on', onclick: (e) => setLang('de', e) }, 'Deutsch'),
-    h('button', { onclick: (e) => setLang('en', e) }, 'English'));
+    h('button', { class: lang === 'en' ? 'on' : '', onclick: (e) => setLang('en', e) }, 'English'),
+    h('button', { class: lang === 'de' ? 'on' : '', onclick: (e) => setLang('de', e) }, 'Deutsch'));
   const setLang = (l, e) => { lang = l; toggle.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === e.target)); render(); };
   const render = () => { out.textContent = data[lang]; };
-  sheet(h('div', {}, h('h3', {}, 'Satz erklärt'), h('p', { class: 'serif', style: { fontSize: '17px' } }, sentence), toggle, h('div', { class: 'card mt' }, out)));
+  sheet(h('div', {}, h('h3', {}, t('Satz erklärt')), h('p', { class: 'serif', style: { fontSize: '17px' } }, sentence), toggle, h('div', { class: 'card mt' }, out)));
   try {
     data = await call({
       system: 'Du erklärst Deutschlernenden (Niveau A1–A2) die Grammatik eines Satzes. Kurz, klar, ohne Fachjargon wo möglich. Gehe auf Wortstellung, Kasus/Artikel, Verbformen und wichtige Wörter ein.',
@@ -96,7 +97,7 @@ export async function explainSentenceSheet(sentence) {
     });
     toggle.hidden = false;
     render();
-  } catch (e) { out.textContent = `Fehler: ${e.message}`; }
+  } catch (e) { out.textContent = t('Fehler: {0}', e.message); }
 }
 
 // ---------- new reading text at the learner's level ----------
@@ -115,16 +116,16 @@ export async function newReadingTextSheet() {
   const chapters = await listChapters();
   const last = (await db.kv.get('lastPage')) || 1;
   const cur = chapterFor(chapters, last)?.num || 1;
-  const chSel = h('select', {}, chapters.map((c) => h('option', { value: c.num, selected: c.num === cur }, `bis Kapitel ${c.num}`)));
-  const topic = h('input', { type: 'text', placeholder: 'Thema (optional), z. B. ein Ausflug', 'data-de': '' });
+  const chSel = h('select', {}, chapters.map((c) => h('option', { value: c.num, selected: c.num === cur }, t('bis Kapitel {0}', c.num))));
+  const topic = h('input', { type: 'text', placeholder: t('Thema (optional), z. B. ein Ausflug'), 'data-de': '' });
   const status = h('div', { class: 'small' });
-  const go = h('button', { class: 'btn primary block mt' }, 'Text erstellen');
-  const s = sheet(h('div', {}, h('h3', {}, 'Neuer Lesetext'),
-    h('p', { class: 'sub' }, 'Ein neuer, kurzer Text mit dem Wortschatz deiner bisherigen Kapitel – wie im Buch, nur mehr davon.'),
-    h('label', { class: 'field' }, h('span', {}, 'Wortschatz'), chSel), h('label', { class: 'field' }, h('span', {}, 'Thema'), topic), go, status));
+  const go = h('button', { class: 'btn primary block mt' }, t('Text erstellen'));
+  const s = sheet(h('div', {}, h('h3', {}, t('Neuer Lesetext')),
+    h('p', { class: 'sub' }, t('Ein neuer, kurzer Text mit dem Wortschatz deiner bisherigen Kapitel – wie im Buch, nur mehr davon.')),
+    h('label', { class: 'field' }, h('span', {}, t('Wortschatz')), chSel), h('label', { class: 'field' }, h('span', {}, t('Thema')), topic), go, status));
   go.addEventListener('click', async () => {
     go.disabled = true;
-    status.replaceChildren(h('span', { class: 'spinner' }), ' Text wird geschrieben … (ca. 20–60 s)');
+    status.replaceChildren(h('span', { class: 'spinner' }), t(' Text wird geschrieben … (ca. 20–60 s)'));
     try {
       const n = +chSel.value;
       const vocab = await vocabularyUpTo(n);
@@ -142,10 +143,10 @@ export async function newReadingTextSheet() {
       });
       const id = await db.put('texts', { title: r.title, text: r.text, questions: r.questions.slice(0, 3), chapter: n, created: Date.now(), model: settings.aiModel });
       s.close();
-      toast('Lesetext gespeichert');
+      toast(t('Lesetext gespeichert'));
       location.hash = `#/text/${id}`;
     } catch (e) {
-      status.textContent = `Fehler: ${e.message}`;
+      status.textContent = t('Fehler: {0}', e.message);
       go.disabled = false;
     }
   });

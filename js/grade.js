@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 // Forgiving answer comparison + character diff. Pure functions.
 
 const PUNCT = /[.,;:!?"'„“”‚‘’»«()\[\]…]/g;
@@ -45,10 +46,10 @@ export function suggestRating(kind) {
 }
 
 export function verdictText(r) {
-  if (r.kind === 'correct') return r.translit ? 'Richtig – achte auf ä/ö/ü/ß' : 'Richtig';
-  if (r.kind === 'case') return 'Fast richtig – Groß-/Kleinschreibung';
-  if (r.kind === 'near') return 'Fast richtig';
-  return 'Leider falsch';
+  if (r.kind === 'correct') return r.translit ? t('Richtig – achte auf ä/ö/ü/ß') : t('Richtig');
+  if (r.kind === 'case') return t('Fast richtig – Groß-/Kleinschreibung');
+  if (r.kind === 'near') return t('Fast richtig');
+  return t('Leider falsch');
 }
 
 /** Character-level diff: [{ op: '=', '-', '+', s }] turning `a` (typed) into `b` (expected). */

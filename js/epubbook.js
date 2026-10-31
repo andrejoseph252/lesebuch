@@ -1,4 +1,5 @@
 // EPUB books: ingest (unzip + clean on the device), illustrations, and re-cleaning after app updates.
+import { t } from './i18n.js';
 import * as db from './db.js';
 import { readEpub, openZip } from './epub.js';
 import { cleanBook, CLEAN_VERSION } from './clean.js';
@@ -47,10 +48,10 @@ async function syncExercises(items) {
 }
 
 export async function ingestEpub(file, progress) {
-  progress?.('EPUB wird gelesen …', 0.1);
+  progress?.(t('EPUB wird gelesen …'), 0.1);
   const buf = new Uint8Array(await file.arrayBuffer());
   const { title, pages } = await readEpub(buf);
-  progress?.('Text wird bereinigt …', 0.5);
+  progress?.(t('Text wird bereinigt …'), 0.5);
   await db.kv.set('epub', new Blob([buf], { type: 'application/epub+zip' }));
   await db.kv.del('pdf');
   const book = await storeClean(pages, { replaceChapterList: true });
@@ -59,7 +60,7 @@ export async function ingestEpub(file, progress) {
     fingerprint: `${file.name}:${file.size}`, loadedAt: Date.now(), tuned: fix.isThisBook(pages), extracted: true,
   };
   await db.kv.set('book', info);
-  progress?.('Fertig', 1);
+  progress?.(t('Fertig'), 1);
   return { info, book };
 }
 

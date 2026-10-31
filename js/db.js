@@ -92,7 +92,8 @@ export async function exportData({ includePages = false } = {}) {
     if (name === 'kv') {
       const ks = await keys('kv');
       const entries = [];
-      for (const k of ks) if (!KV_EXCLUDE.has(k)) entries.push([k, await get('kv', k)]);
+      // replacement photos are binary and stay on the device; crop/position edits travel in 'imageEdits'
+      for (const k of ks) if (!KV_EXCLUDE.has(k) && !String(k).startsWith('imageReplace:')) entries.push([k, await get('kv', k)]);
       out.stores.kv = entries;
     } else if (name === 'pages') {
       const pages = await all('pages');

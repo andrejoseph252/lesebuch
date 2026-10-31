@@ -1,4 +1,5 @@
 // The book: PDF storage (IndexedDB only), PDF.js loading, text extraction, rendering, OCR.
+import { t } from './i18n.js';
 import * as db from './db.js';
 
 const VENDOR = new URL('../vendor/', import.meta.url).href;
@@ -10,7 +11,7 @@ function loadScript(src) {
     const s = document.createElement('script');
     s.src = src;
     s.onload = resolve;
-    s.onerror = () => reject(new Error(`Konnte ${src} nicht laden`));
+    s.onerror = () => reject(new Error(t('Konnte {0} nicht laden', src)));
     document.head.append(s);
   });
 }
@@ -84,7 +85,7 @@ function compactItems(content) {
 /** Extract text for every page not yet cached. progress(done, total). */
 export async function extractAll(progress) {
   const doc = await getDoc();
-  if (!doc) throw new Error('Kein Buch geladen');
+  if (!doc) throw new Error(t('Kein Buch geladen'));
   const have = new Set(await db.keys('pages'));
   const total = doc.numPages;
   let done = 0;

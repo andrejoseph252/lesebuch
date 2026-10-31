@@ -1,4 +1,5 @@
 // Wiederholung: FSRS review session over cards built from your own words and exercise mistakes.
+import { t } from './i18n.js';
 import { h, icon, genderClass, fmtInterval, shuffle, startOfDay } from './ui.js';
 import * as db from './db.js';
 import { createScheduler } from './fsrs.js';
@@ -9,6 +10,7 @@ import { speak, ttsSupported } from './tts.js';
 import { logActivity } from './reread.js';
 
 const TYPE_KEY = { cloze: 'cloze', gender: 'gender', plural: 'plural', error: 'error' };
+// translated at use time so a language switch applies immediately
 const TYPE_LABEL = { cloze: 'Lückensatz', gender: 'Genus', plural: 'Plural', error: 'Fehlerkarte' };
 const RATINGS = [[1, 'Nochmal'], [2, 'Schwer'], [3, 'Gut'], [4, 'Leicht']];
 
@@ -46,7 +48,7 @@ export async function renderReview(view) {
   const count = h('span', { class: 'small' });
   const stage = h('div');
   view.append(h('div', { class: 'review-top', style: { marginTop: '12px' } },
-    h('a', { class: 'iconbtn', href: '#/ueben', 'aria-label': 'Beenden', html: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>' }),
+    h('a', { class: 'iconbtn', href: '#/ueben', 'aria-label': t('Beenden'), html: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>' }),
     h('div', { class: 'progress' }, bar), count), stage);
 
   const next = async () => {
@@ -58,11 +60,11 @@ export async function renderReview(view) {
       else {
         const w = waiting[0];
         stage.replaceChildren(h('div', { class: 'card center' },
-          h('h3', {}, 'Kurze Pause'),
-          h('p', { class: 'sub' }, `${waiting.length} Karte(n) kommen in ${fmtInterval(w.due - Date.now())} wieder.`),
+          h('h3', {}, t('Kurze Pause')),
+          h('p', { class: 'sub' }, t('{0} Karte(n) kommen in {1} wieder.', waiting.length, fmtInterval(w.due - Date.now()))),
           h('div', { class: 'row', style: { justifyContent: 'center' } },
-            h('a', { class: 'btn', href: '#/heute' }, 'Fertig für jetzt'),
-            h('button', { class: 'btn primary', onclick: () => { queue.push(...waiting.splice(0)); next(); } }, 'Jetzt wiederholen'))));
+            h('a', { class: 'btn', href: '#/heute' }, t('Fertig für jetzt')),
+            h('button', { class: 'btn primary', onclick: () => { queue.push(...waiting.splice(0)); next(); } }, t('Jetzt wiederholen')))));
         return;
       }
     }
@@ -70,9 +72,9 @@ export async function renderReview(view) {
     if (!card) {
       bar.style.width = '100%';
       stage.replaceChildren(h('div', { class: 'card center' },
-        h('h3', {}, total ? 'Geschafft!' : 'Nichts fällig'),
-        h('p', { class: 'sub' }, total ? `${done} Karten wiederholt.` : 'Tippe beim Lesen auf Wörter und füge sie hinzu – daraus entstehen deine Karten.'),
-        h('div', { class: 'row', style: { justifyContent: 'center' } }, h('a', { class: 'btn primary', href: '#/heute' }, 'Zur Übersicht'))));
+        h('h3', {}, total ? t('Geschafft!') : t('Nichts fällig')),
+        h('p', { class: 'sub' }, total ? t('{0} Karten wiederholt.', done) : t('Tippe beim Lesen auf Wörter und füge sie hinzu – daraus entstehen deine Karten.')),
+        h('div', { class: 'row', style: { justifyContent: 'center' } }, h('a', { class: 'btn primary', href: '#/heute' }, t('Zur Übersicht')))));
       return;
     }
     const content = await cardView(card, chapters);
@@ -114,14 +116,14 @@ async function cardView(card, chapters) {
 }
 
 function shell(type, meta) {
-  const el = h('div', { class: 'rcard' }, h('div', { class: 'kind' }, h('span', {}, TYPE_LABEL[type]), h('span', {}, meta || '')));
+  const el = h('div', { class: 'rcard' }, h('div', { class: 'kind' }, h('span', {}, t(TYPE_LABEL[type])), h('span', {}, meta || '')));
   return el;
 }
 
 /** Shared answer flow: typed answer → diff + verdict → rating buttons with a suggested choice. */
 function typedFlow(api, el, input, expected, { after } = {}) {
   const res = h('div');
-  const btn = h('button', { class: 'btn primary block mt' }, 'Prüfen');
+  const btn = h('button', { class: 'btn primary block mt' }, t('Prüfen'));
   el.append(res, btn);
   const submit = () => {
     if (api.checked) return;
@@ -147,7 +149,7 @@ function ratings(api, el, pre) {
   const row = h('div', { class: 'ratings' }, RATINGS.map(([r, label]) => h('button', {
     class: r === pre ? 'pre' : '', dataset: { r },
     onclick: () => api.onRate(r),
-  }, label, h('small', {}, fmtInterval(api.preview[r].dueMs)))));
+  }, t(label), h('small', {}, fmtInterval(api.preview[r].dueMs)))));
   el.append(row);
   api.commit = () => api.onRate(pre);
   row.querySelector('.pre')?.focus({ preventScroll: true });
@@ -160,23 +162,23 @@ function ratings(api, el, pre) {
 
 function clozeCard(w, ch) {
   const api = {};
-  const el = shell('cloze', ch ? `Kapitel ${ch}` : '');
+  const el = shell('cloze', ch ? t('Kapitel {0}', ch) : '');
   const span = clozeSpan(w);
   const s = w.sentence;
   const input = h('input', { class: 'gap-in', 'data-de': '', autocapitalize: 'off', autocomplete: 'off', spellcheck: 'false', style: { width: `${Math.max(4, span.answer.length * 0.75 + 2)}em` } });
   const sentence = h('div', { class: 'ex-sentence' }, s.slice(0, span.start), input, s.slice(span.end));
   const hint = w.meaning ? h('div', { class: 'hint' }, w.meaning) : null;
   const listen = ttsSupported && (settings.listenFirst === 'always' || (settings.listenFirst === 'sometimes' && Math.random() < 0.3));
-  const speakBtn = ttsSupported ? h('button', { class: 'btn small', onclick: () => speak(s) }, icon('speaker'), 'Satz hören') : null;
+  const speakBtn = ttsSupported ? h('button', { class: 'btn small', onclick: () => speak(s) }, icon('speaker'), t('Satz hören')) : null;
   const body = h('div', {}, sentence, hint);
   typedFlow(api, body, input, span.answer, { after: (res) => speakBtn && res.append(h('div', { class: 'row mt' }, speakBtn)) });
   if (listen) {
     // listening variant: hear the sentence before seeing it
     const focus = api.focus;
     const gate = h('div', { class: 'center', style: { padding: '24px 0' } },
-      h('p', { class: 'sub' }, 'Erst hören, dann lesen'),
-      h('button', { class: 'btn', onclick: () => speak(s) }, icon('speaker'), 'Nochmal hören'),
-      h('div', { class: 'mt' }, h('button', { class: 'btn primary', onclick: () => { gate.replaceWith(body); focus(); } }, 'Text zeigen')));
+      h('p', { class: 'sub' }, t('Erst hören, dann lesen')),
+      h('button', { class: 'btn', onclick: () => speak(s) }, icon('speaker'), t('Nochmal hören')),
+      h('div', { class: 'mt' }, h('button', { class: 'btn primary', onclick: () => { gate.replaceWith(body); focus(); } }, t('Text zeigen'))));
     el.append(gate);
     api.focus = () => {};
     api.ready = () => speak(s);
@@ -187,7 +189,7 @@ function clozeCard(w, ch) {
 
 function genderCard(w, ch) {
   const api = {};
-  const el = shell('gender', ch ? `Kapitel ${ch}` : '');
+  const el = shell('gender', ch ? t('Kapitel {0}', ch) : '');
   el.append(h('div', { class: 'lemma' }, w.lemma));
   const btns = h('div', { class: 'gender-btns' }, ['der', 'die', 'das'].map((a) => h('button', { class: genderClass(a), dataset: { a } }, a)));
   el.append(btns);
@@ -200,7 +202,7 @@ function genderCard(w, ch) {
       if (b.dataset.a === w.article) b.classList.add('answer');
     });
     el.append(h('div', { class: `verdict ${right ? 'ok' : 'bad'}` },
-      h('div', { class: 'ans' }, h('span', { class: `art ${genderClass(w.article)}` }, w.article), ` ${w.lemma}`, w.plural ? h('span', { class: 'small' }, ` · Plural: ${w.plural}`) : null)));
+      h('div', { class: 'ans' }, h('span', { class: `art ${genderClass(w.article)}` }, w.article), ` ${w.lemma}`, w.plural ? h('span', { class: 'small' }, t(' · Plural: {0}', w.plural)) : null)));
     if (ttsSupported) speak(`${w.article} ${w.lemma}`);
     ratings(api, el, right ? 3 : 1);
   };
@@ -214,10 +216,10 @@ function genderCard(w, ch) {
 
 function pluralCard(w, ch) {
   const api = {};
-  const el = shell('plural', ch ? `Kapitel ${ch}` : '');
+  const el = shell('plural', ch ? t('Kapitel {0}', ch) : '');
   el.append(h('div', { class: 'lemma' }, w.article ? h('span', { class: `art ${genderClass(w.article)}` }, `${w.article} `) : null, w.lemma));
-  const input = h('input', { 'data-de': '', placeholder: 'Plural (z. B. die Häuser)', autocapitalize: 'off', autocomplete: 'off', spellcheck: 'false' });
-  el.append(h('label', { class: 'field' }, h('span', {}, 'Wie heisst der Plural?'), input));
+  const input = h('input', { 'data-de': '', placeholder: t('Plural (z. B. die Häuser)'), autocapitalize: 'off', autocomplete: 'off', spellcheck: 'false' });
+  el.append(h('label', { class: 'field' }, h('span', {}, t('Wie heisst der Plural?')), input));
   // accept the plural with or without its article
   const full = w.plural.trim();
   const bare = full.replace(/^die\s+/i, '');
@@ -228,16 +230,16 @@ function pluralCard(w, ch) {
 
 function errorCard(ex, gapKey) {
   const api = {};
-  const el = shell('error', `Übung · S. ${ex.page}`);
+  const el = shell('error', t('Übung · S. {0}', ex.page));
   if (gapKey === 'q' || ex.type === 'answer') {
     el.append(h('div', { class: 'ex-sentence', style: { lineHeight: 1.5 } }, ex.q));
     const ta = h('textarea', { 'data-de': '', rows: 2 });
     el.append(ta);
-    const show = h('button', { class: 'btn primary block mt' }, 'Antwort zeigen');
+    const show = h('button', { class: 'btn primary block mt' }, t('Antwort zeigen'));
     el.append(show);
     show.addEventListener('click', () => {
       show.remove();
-      el.append(h('div', { class: 'verdict near' }, h('div', {}, 'Gespeicherte Antwort'), h('div', { class: 'ans' }, ex.answer || '–')));
+      el.append(h('div', { class: 'verdict near' }, h('div', {}, t('Gespeicherte Antwort')), h('div', { class: 'ans' }, ex.answer || '–')));
       ratings(api, el, 3);
     });
     api.focus = () => ta.focus({ preventScroll: true });
@@ -247,9 +249,9 @@ function errorCard(ex, gapKey) {
     el.append(h('div', { class: 'ex-sentence' }, ex.segs.map((s, k) => (s.t === 'text' ? s.v : k === +gapKey ? input : h('span', { class: 'gapmark' }, s.answer || '…')))));
     if (target?.answer) typedFlow(api, el, input, target.answer, { after: (res) => target.explanation && res.append(h('p', { class: 'small' }, target.explanation)) });
     else {
-      const show = h('button', { class: 'btn primary block mt' }, 'Prüfen');
+      const show = h('button', { class: 'btn primary block mt' }, t('Prüfen'));
       el.append(show);
-      show.addEventListener('click', () => { show.remove(); el.append(h('div', { class: 'verdict near' }, 'Noch keine Lösung gespeichert – selbst bewerten.')); ratings(api, el, 3); });
+      show.addEventListener('click', () => { show.remove(); el.append(h('div', { class: 'verdict near' }, t('Noch keine Lösung gespeichert – selbst bewerten.'))); ratings(api, el, 3); });
       api.focus = () => input.focus({ preventScroll: true });
     }
   }

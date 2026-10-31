@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 // Small DOM helpers shared by all views.
 
 export function h(tag, attrs = {}, ...children) {
@@ -32,11 +33,11 @@ export function esc(s) {
 
 let toastTimer;
 export function toast(msg, ms = 2200) {
-  const t = $('#toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+  toastTimer = setTimeout(() => el.classList.remove('show'), ms);
 }
 
 /** Open a bottom sheet. Returns { el, close, closed } where closed is a promise. */
@@ -75,14 +76,14 @@ export function sheet(content, { onClose } = {}) {
 }
 
 /** Promise-based confirm without native dialogs. */
-export function confirmSheet(title, text, { ok = 'OK', danger = false } = {}) {
+export function confirmSheet(title, text, { ok = t('OK'), danger = false } = {}) {
   return new Promise((resolve) => {
     let answered = false;
     const s = sheet(h('div', {},
       h('h3', {}, title),
       text ? h('p', { class: 'sub' }, text) : null,
       h('div', { class: 'row mt' },
-        h('button', { class: 'btn grow', onclick: () => { answered = true; s.close(); resolve(false); } }, 'Abbrechen'),
+        h('button', { class: 'btn grow', onclick: () => { answered = true; s.close(); resolve(false); } }, t('Abbrechen')),
         h('button', { class: `btn grow ${danger ? 'danger' : 'primary'}`, onclick: () => { answered = true; s.close(); resolve(true); } }, ok)),
     ), { onClose: () => { if (!answered) resolve(false); } });
   });
@@ -99,17 +100,17 @@ export function fmtInterval(ms) {
   const m = ms / 60000;
   if (m < 60) return `${Math.max(1, Math.round(m))} min`;
   const hrs = m / 60;
-  if (hrs < 24) return `${Math.round(hrs)} Std`;
+  if (hrs < 24) return t('{0} Std', Math.round(hrs));
   const d = hrs / 24;
-  if (d < 31) return `${Math.round(d)} T`;
-  if (d < 365) return `${Math.round(d / 30.4)} Mon`;
-  return `${(d / 365).toFixed(1).replace('.', ',')} J`;
+  if (d < 31) return t('{0} T', Math.round(d));
+  if (d < 365) return t('{0} Mon', Math.round(d / 30.4));
+  return t('{0} J', (d / 365).toFixed(1));
 }
 export function fmtDue(ts) {
   const days = Math.round((startOfDay(ts) - startOfDay()) / DAY);
-  if (days <= 0) return 'heute';
-  if (days === 1) return 'morgen';
-  return `in ${days} Tagen`;
+  if (days <= 0) return t('heute');
+  if (days === 1) return t('morgen');
+  return t('in {0} Tagen', days);
 }
 
 // ---- German umlaut bar above the keyboard ----
@@ -123,9 +124,9 @@ export function initKeyboardBar() {
     bar.style.bottom = `${Math.max(0, offset)}px`;
   };
   document.addEventListener('focusin', (e) => {
-    const t = e.target;
-    if (t.matches?.('input[data-de], textarea[data-de]')) {
-      lastInput = t;
+    const el = e.target;
+    if (el.matches?.('input[data-de], textarea[data-de]')) {
+      lastInput = el;
       bar.hidden = false;
       place();
     }

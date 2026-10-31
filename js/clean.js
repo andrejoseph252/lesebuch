@@ -266,6 +266,14 @@ export function sentences(text) {
   return out;
 }
 
+/** Stable short id for an exercise (used to match published answer keys without storing book text). */
+export function exKey(ex) {
+  let h = 0x811c9dc5;
+  const str = `${ex.page}|${ex.text}`;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(36);
+}
+
 // ---------- paragraphs ----------
 // The OCR gives one text blob per page. Rebuild readable paragraphs from the book's own rhythm:
 // question + answer pairs, dialogue turns (with the speaker), and short narrative runs.

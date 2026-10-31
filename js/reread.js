@@ -2,6 +2,7 @@
 import * as db from './db.js';
 import { toast, DAY, startOfDay, fmtDue } from './ui.js';
 import { chapterTitle } from './model.js';
+import { t } from './i18n.js';
 
 export const REREAD_DAYS = [1, 3, 7, 16, 35, 80];
 
@@ -22,7 +23,7 @@ export async function markChapterRead(ch) {
   c.reread = r;
   await db.put('chapters', c);
   await logActivity();
-  toast(r.due ? `${chapterTitle(ch)} ✓ · nochmal lesen ${fmtDue(r.due)}` : `${chapterTitle(ch)} ✓ · alle Wiederholungen geschafft`, 2800);
+  toast(r.due ? t('{0} ✓ · nochmal lesen {1}', chapterTitle(ch), fmtDue(r.due)) : t('{0} ✓ · alle Wiederholungen geschafft', chapterTitle(ch)), 2800);
   return c;
 }
 
