@@ -92,6 +92,8 @@ export async function renderMore(view) {
         col(h('span', {}, t('Stimme')), voiceSel, h('div', { class: 'small' }, t('Auf dem iPhone: Einstellungen → Bedienungshilfen → Gesprochene Inhalte → Stimmen → Deutsch, dort eine „Erweitert“-Stimme laden.'))),
         col(h('div', { class: 'spread' }, h('span', {}, t('Tempo')), rateOut),
           h('input', { type: 'range', min: 0.5, max: 1.3, step: 0.05, value: settings.ttsRate, oninput: (e) => { rateOut.textContent = `${(+e.target.value).toFixed(2)}×`; saveSettings({ ttsRate: +e.target.value }); } })),
+        h('label', { class: 'setting' }, h('span', { class: 'grow' }, t('Nach der Seite weiterlesen'), h('div', { class: 'small' }, t('Beim Vorlesen automatisch zur nächsten Seite blättern'))),
+          h('input', { type: 'checkbox', checked: settings.readOn, onchange: (e) => saveSettings({ readOn: e.target.checked }) })),
         h('button', { class: 'item', onclick: () => speak('Am Fluss steht ein kleines Haus. Das Haus ist alt, aber es ist schön.') }, h('span', { class: 'grow' }, t('Probe hören')), h('span', { class: 'chev' }, '▶'))));
   }
 

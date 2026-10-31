@@ -13,6 +13,7 @@ const DEFAULTS = {
   listenFirst: 'sometimes', // off | sometimes | always
   ttsVoice: '',
   ttsRate: 0.95,
+  readOn: true,             // keep reading aloud onto the next page
   aiModel: 'claude-opus-5-5',
 };
 

@@ -2,7 +2,7 @@
 // Pure functions: no DOM, runs in Node for testing. Output is derived at load time on the device;
 // the repository only contains rules and position-based fixes, never book text.
 
-export const CLEAN_VERSION = 2;
+export const CLEAN_VERSION = 3;
 
 const FOOTER_RE = /\s*patreon\.com\/\S+\s+for\s+audio\b/i;
 const NUMWORDS = ['eins', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun', 'zehn', 'elf', 'zwölf'];

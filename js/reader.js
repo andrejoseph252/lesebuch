@@ -97,7 +97,7 @@ export function wireWordTaps(container, getCtx) {
       sentence: sentence.trim().replace(/^\d{1,2}[.)]\s+/, ''),
       known: state.known.get(form.toLowerCase()),
       ...getCtx(),
-      onReadFrom: ttsSupported ? () => readAloud(si) : null,
+      onReadFrom: ttsSupported ? () => readAloud(si, state.continueRead || null) : null,
       onSaved: async () => {
         state.known = await knownWords();
         $$('.w', container).forEach((x) => x.classList.toggle('known', state.known.has(x.textContent.toLowerCase())));
@@ -108,31 +108,75 @@ export function wireWordTaps(container, getCtx) {
 }
 
 // ---------- read aloud with sentence highlight ----------
+// Pause = stop and remember the sentence; resume = start again from it (reliable on iOS).
+const reading = { on: false, paused: false, idx: 0, run: 0, onEnd: null, label: '' };
 let playerEl = null;
-export function readAloud(from = 0) {
-  const list = state.sentences.slice(Math.max(0, from));
-  if (!list.length) return;
-  closePlayer();
-  playerEl = h('div', { class: 'player' }, h('span', {}, t('Vorlesen')),
-    h('button', { class: 'iconbtn', 'aria-label': t('Stopp'), onclick: () => { stopTts(); closePlayer(); } }, icon('stop')));
-  document.body.append(playerEl);
+
+export function readAloud(from = 0, onEnd = null) {
+  reading.on = true;
+  reading.paused = false;
+  reading.onEnd = onEnd;
+  reading.idx = Math.max(0, from);
+  const list = state.sentences.slice(reading.idx);
+  showPlayer();
+  if (!list.length) { if (onEnd) onEnd(); else stopReading(); return; } // empty page: move on
+  const base = reading.idx;
+  const run = ++reading.run;
   speakSequence(list.map((s) => s.text), {
     onSentence: (i) => {
+      if (run !== reading.run) return;
       $$('.s.speaking').forEach((x) => x.classList.remove('speaking'));
-      if (i < 0) { closePlayer(); return; }
+      if (i < 0) return;
+      reading.idx = base + i;
       const el = list[i].el;
       el.classList.add('speaking');
       const r = el.getBoundingClientRect();
-      if (r.top < 70 || r.bottom > innerHeight - 140) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      if (r.top < 70 || r.bottom > innerHeight - 160) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     },
+  }).then(() => {
+    if (run !== reading.run || !reading.on || reading.paused) return; // stopped or paused, not finished
+    if (reading.onEnd) reading.onEnd(); else stopReading();
   });
 }
+
+export function stopReading() {
+  reading.on = false;
+  reading.paused = false;
+  reading.run++;
+  stopTts();
+  closePlayer();
+}
+function togglePause() {
+  if (reading.paused) { readAloud(reading.idx, reading.onEnd); return; }
+  reading.paused = true;
+  reading.run++;
+  stopTts();
+  showPlayer();
+}
+
+function showPlayer() {
+  document.body.classList.add('reading-aloud');
+  if (!playerEl) {
+    playerEl = h('div', { class: 'player', role: 'region', 'aria-label': t('Vorlesen') });
+    document.body.append(playerEl);
+  }
+  playerEl.replaceChildren(
+    h('button', { class: 'iconbtn', 'aria-label': reading.paused ? t('Weiter vorlesen') : t('Pause'), onclick: togglePause }, icon(reading.paused ? 'play' : 'pause')),
+    h('span', { class: 'player-label' }, reading.paused ? t('Pausiert') : t('Vorlesen'), reading.label ? h('small', {}, ` · ${reading.label}`) : null),
+    h('button', { class: 'iconbtn', 'aria-label': t('Stopp'), onclick: stopReading }, icon('stop')));
+}
 function closePlayer() {
+  document.body.classList.remove('reading-aloud');
   playerEl?.remove();
   playerEl = null;
   $$('.s.speaking').forEach((x) => x.classList.remove('speaking'));
 }
-export function leaveReader() { stopTts(); closePlayer(); }
+export function leaveReader() { stopReading(); }
+
+/** The always-there play button on reading pages. */
+function playFab(onPlay) {
+  return h('button', { class: 'play-fab', 'aria-label': t('Seite vorlesen'), onclick: onPlay }, icon('play'));
+}
 
 // ---------- the book reader ----------
 export async function renderReader(view, { page } = {}) {
@@ -160,15 +204,23 @@ export async function renderReader(view, { page } = {}) {
   addEventListener('scroll', onScroll, { passive: true });
   view.addEventListener('view:leave', () => removeEventListener('scroll', onScroll), { once: true });
 
-  const go = (n) => {
+  const go = (n, { keepReading = false } = {}) => {
     n = Math.min(numPages, Math.max(1, n));
-    if (n === state.page) return;
-    stopTts(); closePlayer();
+    if (n === state.page) return Promise.resolve();
+    if (!keepReading) stopReading();
     state.page = n;
     history.replaceState(null, '', `#/lesen/${n}`);
-    draw();
     scrollTo(0, 0);
+    return draw();
   };
+  // after a page is read, turn the page and keep going (unless switched off in settings)
+  const continueReading = () => {
+    if (!settings.readOn || state.page >= numPages) { stopReading(); return; }
+    go(state.page + 1, { keepReading: true }).then(() => readAloud(0, continueReading));
+  };
+  state.continueRead = continueReading;
+  const startReading = (from = 0) => readAloud(from, continueReading);
+  if (ttsSupported) view.append(playFab(() => startReading(0)));
 
   // swipe left/right to turn pages (not while zoomed in page mode)
   let t0 = null;
@@ -192,6 +244,8 @@ export async function renderReader(view, { page } = {}) {
 
   async function draw() {
     const n = state.page;
+    reading.label = t('S. {0}', n);
+    if (reading.on) showPlayer();
     await db.kv.set('lastPage', n);
     const ch = chapterFor(chapters, n);
     const rec = await getPage(n);
@@ -299,7 +353,7 @@ export async function renderReader(view, { page } = {}) {
           h('button', { onclick: () => { saveSettings({ fontSize: Math.max(14, settings.fontSize - 1) }); }, 'aria-label': t('Kleiner') }, 'A−'),
           h('button', { onclick: () => { saveSettings({ fontSize: Math.min(28, settings.fontSize + 1) }); }, 'aria-label': t('Größer'), style: { fontSize: '17px' } }, 'A+'))),
       h('div', { class: 'list mt' },
-        ttsSupported && rec?.hasText ? item(t('Seite vorlesen'), () => { if (mode() !== 'text') setMode('text').then(() => readAloud(0)); else readAloud(0); }) : null,
+        ttsSupported && rec?.hasText ? item(t('Seite vorlesen'), () => { if (mode() !== 'text') setMode('text').then(() => startReading(0)); else startReading(0); }) : null,
         rec?.hasText && !isEpub ? item(t('Übung erstellen'), () => import('./exercises.js').then((m) => m.openBuilder(n, rec, ch, () => draw())), t('Lücken-Sätze dieser Seite auswählen')) : null,
         isStart
           ? item(t('Kapitelanfang entfernen'), async () => {
@@ -348,7 +402,10 @@ export async function renderTextReader(view, id) {
   const head = h('header', { class: 'reader-head' },
     h('a', { class: 'iconbtn', href: '#/mehr/texte', 'aria-label': t('Zurück') }, icon('back')),
     h('div', { class: 'title' }, h('b', {}, rec.title || t('Lesetext')), h('span', { class: 'small' }, rec.chapter ? t('bis Kapitel {0}', rec.chapter) : '')),
-    ttsSupported ? h('button', { class: 'iconbtn', 'aria-label': t('Vorlesen'), onclick: () => readAloud(0) }, icon('speaker')) : h('span', { style: { width: '44px' } }));
+    h('span', { style: { width: '44px' } }));
+  state.continueRead = null;
+  reading.label = '';
+  if (ttsSupported) view.append(playFab(() => readAloud(0)));
   const txt = h('article', { class: 'page-text', lang: 'de' });
   const blocks = String(rec.text).split(/\n\s*\n/).map((p) => ({ kind: 'p', text: p.replace(/\s+/g, ' ').trim(), lines: [], notes: [] })).filter((b) => b.text);
   blocks.unshift({ kind: 'h', big: true, text: rec.title || t('Lesetext'), lines: [], notes: [] });

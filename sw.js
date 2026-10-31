@@ -1,6 +1,6 @@
 // Service worker: app shell + vendor files cached for offline use.
 // Bump VERSION when shipping changes so clients pick up the new shell.
-const VERSION = 'lesebuch-v3';
+const VERSION = 'lesebuch-v4';
 const SHELL = [
   './',
   'index.html',

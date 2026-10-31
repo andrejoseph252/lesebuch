@@ -1,7 +1,7 @@
 // Generated answer key for the end-of-chapter exercises (chapters 1–14), written by Claude Haiku.
 // Answers only, keyed by exKey() — the exercise sentences and book text are not stored here.
-// a = gap answers in order, s = model answer for a question. Unsure items are left out.
-export const SOLUTIONS_VERSION = 1;
+// a = gap answers in order, s = model answer for a question. Unsure items were reviewed by hand.
+export const SOLUTIONS_VERSION = 2;
 export const SOLUTIONS = {
   "102ncv2": {"a": ["Die", "Töchter"]},
   "1069luz": {"a": ["Sommerferien"]},
@@ -540,4 +540,16 @@ export const SOLUTIONS = {
   "zl1q0n": {"a": ["zusammen"]},
   "zwy1hc": {"s": "Sie schreiben auf Papier."},
   "zy6b1x": {"a": ["hat"]},
+  "aqdw3v": {"s": "Lotte ist zehn Jahre alt. Hans ist älter als Lotte."},
+  "1gy6v5m": {"s": "Ja, sie haben eine Schwester, das Baby."},
+  "8xj81f": {"s": "Sein Name ist Hans."},
+  "15czfkn": {"s": "Nein, England ist kleiner als Frankreich."},
+  "1ueozwh": {"a": ["Dann", "fünfundzwanzig", "Minuten", "nach zwei"]},
+  "6gt7yu": {"s": "Nein, Frau Müller ist jeden Tag zu Hause."},
+  "1cro0ec": {"s": "Der grosse Zeiger steht auf drei, und der kleine Zeiger steht zwischen fünf und sechs."},
+  "ugffgs": {"a": ["Frühstück"]},
+  "ahjvk6": {"a": ["Personen", "Vater", "Mutter", "Sohn", "Tochter", "Baby"]},
+  "17fcfxj": {"a": ["am", "ältesten"]},
+  "1tr244d": {"a": ["Wie"]},
+  "1dkv7lz": {"a": ["diesen", "oder"]},
 };
