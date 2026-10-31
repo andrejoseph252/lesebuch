@@ -46,9 +46,15 @@ export function renderBlocks(container, blocks, known, { chapter } = {}) {
       container.append(notesEl(b.notes));
       continue;
     }
-    const el = h(b.kind === 'h' ? 'div' : 'p', { class: b.kind === 'h' ? `hd${b.big ? ' big' : ''}` : '' });
-    for (const s of splitSentences(b.text)) {
-      const sEl = h('span', { class: 's', dataset: { si: sentences.length } });
+    const el = h(b.kind === 'h' ? 'div' : 'p', { class: b.kind === 'h' ? `hd${b.big ? ' big' : ''}` : b.role || '' });
+    let text = b.text;
+    const spk = b.role === 'dlg' && b.speaker && text.startsWith(b.speaker) ? b.speaker : null;
+    if (spk) {
+      el.append(h('span', { class: 'spk' }, spk));
+      text = text.slice(spk.length).replace(/^\s*:\s*/, '');
+    }
+    for (const s of splitSentences(text)) {
+      const sEl = h('span', { class: `s${b.role === 'qa' && /\?["”»“’']*$/.test(s.text.trim()) ? ' q' : ''}`, dataset: { si: sentences.length } });
       for (const t of tokenize(s.text)) {
         if (t.t === 'w') {
           const k = known.has(t.v.toLowerCase()) ? ' known' : '';
@@ -203,15 +209,14 @@ export async function renderReader(view, { page } = {}) {
     state.sentences = [];
     if (isEpub) {
       const txt = h('article', { class: 'page-text', lang: 'de' });
-      for (const src of rec?.images || []) {
-        const img = h('img', { class: 'illus', alt: 'Illustration', loading: 'lazy' });
-        txt.append(img);
-        import('./epubbook.js').then((m2) => m2.imageUrl(src)).then((u) => { img.src = u; }).catch(() => img.remove());
-      }
+      const imgTop = h('div'), imgBottom = h('div');
+      txt.append(imgTop);
+      if (rec?.images?.length) import('./illus.js').then((m2) => m2.renderIllustrations(rec.images, imgTop, imgBottom, () => draw()));
       if (!hasText) txt.append(h('div', { class: 'card center small' }, 'Diese Seite ist in deinem EPUB leer – sie ist beim Scannen verloren gegangen.'));
       state.sentences = renderBlocks(txt, rec?.blocks || [], state.known, { chapter: ch?.num });
       if (rec?.glosses?.length) txt.append(notesEl(rec.glosses));
       if (rec?.words?.length) txt.append(wordsEl(rec.words, state.known));
+      txt.append(imgBottom);
       body.append(txt);
       wireWordTaps(txt, () => ({ page: n, chapterNum: ch?.num ?? null }));
     } else if (m === 'text') {

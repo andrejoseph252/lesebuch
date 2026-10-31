@@ -2,7 +2,7 @@
 // Pure functions: no DOM, runs in Node for testing. Output is derived at load time on the device;
 // the repository only contains rules and position-based fixes, never book text.
 
-export const CLEAN_VERSION = 1;
+export const CLEAN_VERSION = 2;
 
 const FOOTER_RE = /\s*patreon\.com\/\S+\s+for\s+audio\b/i;
 const NUMWORDS = ['eins', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun', 'zehn', 'elf', 'zwölf'];
@@ -266,6 +266,43 @@ export function sentences(text) {
   return out;
 }
 
+// ---------- paragraphs ----------
+// The OCR gives one text blob per page. Rebuild readable paragraphs from the book's own rhythm:
+// question + answer pairs, dialogue turns (with the speaker), and short narrative runs.
+const SPEAKER_RE = /^((?:\p{Lu}[\p{L}’'-]+|im|von|der|die|das)(?: (?:\p{Lu}[\p{L}’'-]+|im|von|der|die|das)){0,3})\s*:\s*(?=["„“”»«]|\p{Lu})/u;
+const isQuestion = (s) => /\?["”»“’']*$/.test(s);
+const opensQuote = (s) => /^["„“”»«]/.test(s);
+const introducesSpeech = (s) => /:\s*["„“”»«]/.test(s);
+// OCR uses the same mark for opening and closing quotes, so an odd count means a quote is still open
+const quoteOpen = (t) => (t.match(/["”“»«„]/g) || []).length % 2 === 1;
+
+export function paragraphize(text) {
+  const out = [];
+  let cur = null;
+  const open = (role, s, speaker) => { cur = { kind: 'p', role, text: s, n: 1, len: s.length, lastQ: isQuestion(s), answers: 0, speaker }; out.push(cur); };
+  for (const s of sentences(text)) {
+    const spk = s.match(SPEAKER_RE);
+    const q = isQuestion(s);
+    const speech = spk || opensQuote(s) || introducesSpeech(s);
+    if (!cur) { open(speech ? 'dlg' : q ? 'qa' : 'n', s, spk?.[1]); continue; }
+    let role = null;
+    if (spk) role = 'dlg';                                                           // "Herr Stein: …" always starts a turn
+    else if (quoteOpen(cur.text) && cur.len < 700) role = null;                      // still inside someone's speech
+    else if (speech) role = 'dlg';                                                   // a new turn
+    else if (cur.role === 'dlg') role = cur.len > 500 ? 'n' : null;                 // narration after speech stays briefly
+    else if (q && !(cur.role === 'qa' && cur.lastQ)) role = 'qa';                    // question starts a Q&A pair
+    else if (cur.role === 'qa' && !cur.lastQ && cur.answers >= 2) role = 'n';
+    else if (cur.role === 'n' && (cur.n >= 4 || cur.len > 380)) role = 'n';          // keep narrative runs short
+    if (role) { open(role, s, spk?.[1]); continue; }
+    cur.text += ` ${s}`;
+    cur.n++;
+    cur.len += s.length;
+    if (cur.role === 'qa' && !q) cur.answers++;
+    cur.lastQ = q;
+  }
+  return out.map(({ kind, role, text: t, speaker }) => ({ kind, role, text: t, ...(speaker ? { speaker } : {}) }));
+}
+
 /**
  * Clean the whole book. pages: [{ href, text, images }] in spine order.
  * Returns { pages: [{ page, href, images, chapter, blocks, glosses, words, raw }], chapters, exercises }
@@ -343,7 +380,7 @@ export function cleanBook(pages, { fixes = {}, chapters: chapterTable = null, sk
           blocks.push({ kind: 'h', big: true, text: titleCase(tm[1]) });
           t = t.slice(tm.index + tm[0].length).trim();
         }
-        if (t) blocks.push({ kind: 'p', text: t });
+        if (t) blocks.push(...paragraphize(t));
       } else {
         t = t.replace(/([?!])(?=[^\s"”“»)])/g, '$1 ')
           .replace(/\s‚(?=\s*\p{L})/gu, ', ')          // low single quote used as comma

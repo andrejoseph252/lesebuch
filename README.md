@@ -4,7 +4,7 @@ A personal, phone-first reading and practice app for *Deutsch nach der Naturmeth
 
 ## What it does
 
-- **Lesen**: the book as a clean, reflowed reading view (serif, adjustable size, dark mode) with its illustrations. The margin glosses appear as *Randnotizen* and the *Wörter* boxes as tappable word lists. Tap any word to hear it, see its sentence, open DWDS, Wiktionary or dict.cc, and add it to your list. The app can read pages aloud (sentence highlighted), and you can practise pronunciation with *Nachsprechen*.
+- **Lesen**: the book as a clean, reflowed reading view (serif, adjustable size, dark mode) broken into readable paragraphs (Q&A pairs, dialogue turns with the speaker, short narrative runs), with its illustrations. Whole-page scans in the EPUB open as a zoomable *Originalseite*, and any image can be cropped, moved above or below the text, or hidden via ✎. The margin glosses appear as *Randnotizen* and the *Wörter* boxes as tappable word lists. Tap any word to hear it, see its sentence, open DWDS, Wiktionary or dict.cc, and add it to your list. The app can read pages aloud (sentence highlighted), and you can practise pronunciation with *Nachsprechen*.
 - **Üben**: every Übung A/B/C at the end of each chapter, imported automatically as digital exercises with inline gaps and an ä ö ü ß bar. Many answers are filled in from the chapter text. Where an answer is unknown, you mark your own answer ✓/✗ and the answer key builds itself. Every mistake becomes a review card.
 - **Wiederholen**: spaced repetition with FSRS v4.5, implemented in `js/fsrs.js` with tests. Card types: cloze sentences from the book (optionally heard first), der/die/das, plural, and error cards from exercises. Typed answers get a character diff and a suggested rating.
 - **Heute**: continue reading, cards due, chapters due for rereading (1, 3, 7, 16, 35, 80 days after you tap "Kapitel gelesen ✓"), open exercises, your streak, and a 14-day chart.
@@ -52,6 +52,7 @@ npm test             # FSRS, grading and text-helper unit tests (Node 18+)
 | `js/epub.js`, `js/clean.js`, `js/bookfix.js`, `js/epubbook.js` | EPUB unzip (no dependency), OCR cleanup, edition fixes, ingest |
 | `js/book.js`, `js/layout.js`, `js/exercises.js` | PDF fallback: PDF.js, column/margin-note layout, OCR, exercise builder |
 | `js/reader.js`, `js/wordsheet.js`, `js/tts.js` | Reader, word sheet, speech |
+| `js/illus.js` | Illustration defaults, crop/position editor, scan viewer |
 | `js/practice.js`, `js/review.js`, `js/fsrs.js`, `js/grade.js` | Exercises, review session, scheduler, answer grading |
 | `js/home.js`, `js/words.js`, `js/more.js`, `js/reread.js` | Other tabs, reread scheduler |
 | `js/ai.js` | Optional AI tutor (direct browser call with your own key) |

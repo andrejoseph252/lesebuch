@@ -300,6 +300,26 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent);
 .page-text .illus { display: block; max-width: 100%; margin: 0 auto 1em; border-radius: 6px; mix-blend-mode: multiply; }
 :root[data-theme="dark"] .page-text .illus { mix-blend-mode: normal; filter: invert(.88) hue-rotate(180deg); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .page-text .illus { mix-blend-mode: normal; filter: invert(.88) hue-rotate(180deg); } }
+.page-text p.qa { border-left: 2px solid var(--accent-soft); padding-left: .75em; margin-bottom: .7em; }
+.page-text p.qa .s.q { display: block; color: var(--ink-2); font-style: italic; }
+.page-text p.dlg { margin-bottom: .6em; }
+.page-text .spk { font: 600 .68em/1 var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--accent); margin-right: .45em; vertical-align: .1em; }
+.illus-fig { position: relative; margin: 0 0 1em; }
+.illus-fig .illus { margin: 0 auto; cursor: zoom-in; }
+.illus-edit { position: absolute; top: 6px; right: 6px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--ink-2); font-size: 15px; cursor: pointer; }
+.scan-card { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0 0 1em; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.scan-card img { width: 52px; height: 72px; object-fit: cover; object-position: top; border-radius: 4px; border: 1px solid var(--line); flex: none; }
+.scan-card span { display: flex; flex-direction: column; font-family: var(--sans); font-size: 14px; }
+.viewer { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; padding-top: var(--safe-t); }
+.viewer-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.viewer-scroll { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding-bottom: var(--safe-b); }
+.viewer-scroll img { display: block; width: 100%; margin: 0 auto; background: #fff; }
+.crop-stage { position: relative; display: inline-block; max-width: 100%; touch-action: none; user-select: none; -webkit-user-select: none; }
+.crop-stage img { display: block; max-width: 100%; max-height: 60vh; width: auto; height: auto; pointer-events: none; }
+.crop-box { position: absolute; border: 2px solid var(--accent); box-shadow: 0 0 0 9999px rgba(0,0,0,.45); cursor: move; }
+.crop-h { position: absolute; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); border: 3px solid var(--surface); }
+.crop-h.nw { left: -13px; top: -13px; cursor: nwse-resize; } .crop-h.ne { right: -13px; top: -13px; cursor: nesw-resize; }
+.crop-h.sw { left: -13px; bottom: -13px; cursor: nesw-resize; } .crop-h.se { right: -13px; bottom: -13px; cursor: nwse-resize; }
 .ex-list { padding-left: 1.4em; margin: 0 0 1em; }
 .ex-list li { margin-bottom: .45em; }
 .page-words { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 1.1em; }

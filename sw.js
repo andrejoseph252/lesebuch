@@ -1,6 +1,6 @@
 // Service worker: app shell + vendor files cached for offline use.
 // Bump VERSION when shipping changes so clients pick up the new shell.
-const VERSION = 'lesebuch-v1';
+const VERSION = 'lesebuch-v2';
 const SHELL = [
   './',
   'index.html',
@@ -22,6 +22,7 @@ const SHELL = [
   'js/fsrs.js',
   'js/grade.js',
   'js/home.js',
+  'js/illus.js',
   'js/layout.js',
   'js/library.js',
   'js/model.js',
