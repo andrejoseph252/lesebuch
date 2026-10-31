@@ -1,0 +1,6 @@
+# The book never goes into this (public) repo.
+*.pdf
+!test/sample.pdf
+.DS_Store
+node_modules/
+*.epub

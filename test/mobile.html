@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="de" translate="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="google" content="notranslate">
+  <title>Lesebuch · Mobile-Vorschau</title>
+  <style>
+    body { margin: 0; background: #888; display: flex; gap: 24px; padding: 16px; font: 13px system-ui; }
+    figure { margin: 0; }
+    iframe { border: 0; background: #fff; display: block; box-shadow: 0 4px 24px rgba(0,0,0,.3); }
+  </style>
+</head>
+<body>
+  <!-- Dev helper: the app at iPhone sizes (390×844 and 375×667). -->
+  <figure><iframe id="a" src="../index.html#/heute" width="390" height="844"></iframe><figcaption>390 × 844</figcaption></figure>
+  <figure><iframe id="b" width="375" height="667"></iframe><figcaption>375 × 667</figcaption></figure>
+  <script>
+    if (location.hash === '#both') document.getElementById('b').src = '../index.html#/heute';
+    else document.getElementById('b').parentElement.remove();
+  </script>
+</body>
+</html>

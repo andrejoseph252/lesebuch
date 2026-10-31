@@ -1,0 +1,10 @@
+{
+  "name": "lesebuch",
+  "private": true,
+  "type": "module",
+  "description": "Static app, no build step. package.json only exists so Node runs the tests as ES modules.",
+  "scripts": {
+    "test": "node test/fsrs.test.mjs",
+    "serve": "python3 -m http.server 8642"
+  }
+}
